@@ -1,52 +1,69 @@
 pipeline {
     agent any
 
-    environment {
-        IMAGE_NAME = "prasad67/maven-web-app"
-    }
-
     stages {
 
-        stage('Checkout Code') {
+        stage('Clean Workspace') {
             steps {
-                checkout scm
+                deleteDir()
             }
         }
 
-        stage('Build WAR') {
+        stage('Clone Latest Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Mohansivakumar017/Jenknis-1.git'
+            }
+        }
+
+        stage('Maven Build') {
             steps {
                 sh 'mvn clean package'
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Verify WAR File') {
+            steps {
+                sh 'ls -l target/'
+            }
+        }
+
+        stage('Stop & Remove Old Container') {
             steps {
                 sh '''
-                  docker build -t $IMAGE_NAME:${BUILD_NUMBER} .
+                docker stop contnr || true
+                docker rm contnr || true
                 '''
             }
         }
 
-        stage('Login to Docker Hub') {
+        stage('Remove Old Docker Images') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh '''
-                      echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                    '''
-                }
+                sh '''
+                docker rmi -f img || true
+                docker image prune -f
+                '''
             }
         }
 
-        stage('Push Image to Docker Hub') {
+        stage('Docker Build (No Cache)') {
             steps {
-                sh '''
-                  docker push $IMAGE_NAME:${BUILD_NUMBER}
-                '''
+                sh 'docker build --no-cache -t img .'
+            }
+        }
+
+        stage('Docker Deploy') {
+            steps {
+                sh 'docker run -d -p 6060:8080 --name contnr img'
+            }
+        }
+
+        stage('Docker Status Check') {
+            steps {
+                sh 'docker ps'
             }
         }
     }
 }
+
+
+
