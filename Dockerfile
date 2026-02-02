@@ -1,5 +1,5 @@
 FROM tomcat:9-jre8
-LABEL maintainer="Durga <durgaprasadsetti67@gmail.com>"
+LABEL maintainer="mohan <23mh1a4435@gmail.com>"
 
 EXPOSE 8080
 
